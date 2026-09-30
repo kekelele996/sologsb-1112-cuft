@@ -9,6 +9,7 @@ import { useRingStore } from './stores/ringStore';
 import { useMeasureStore } from './stores/measureStore';
 import { useSiteStore } from './stores/siteStore';
 import { useSessionStore } from './stores/sessionStore';
+import { useMergeStore } from './stores/mergeStore';
 import { useAmap } from './hooks/useAmap';
 
 const route = useRoute();
@@ -16,6 +17,7 @@ const ringStore = useRingStore();
 const measureStore = useMeasureStore();
 const siteStore = useSiteStore();
 const sessionStore = useSessionStore();
+const mergeStore = useMergeStore();
 const amap = useAmap();
 const ready = ref(false);
 
@@ -29,6 +31,7 @@ onMounted(async () => {
   try {
     await seedIfEmpty();
     await Promise.all([ringStore.hydrate(), measureStore.hydrate(), siteStore.hydrate(), sessionStore.hydrate()]);
+    await mergeStore.refresh();
   } catch (error) {
     ElMessage.error(`本地数据装载失败：${(error as Error).message}`);
   } finally {
@@ -56,6 +59,9 @@ async function handleExport() {
         <el-menu-item index="/measure">量度测量</el-menu-item>
         <el-menu-item index="/sites">鸟点台账</el-menu-item>
         <el-menu-item index="/sessions">调查批次</el-menu-item>
+        <el-menu-item index="/merge">
+          <el-badge :value="mergeStore.badgeCount" :hidden="mergeStore.badgeCount === 0" class="menu-badge">摘录合并</el-badge>
+        </el-menu-item>
       </el-menu>
     </el-aside>
     <el-container>
@@ -97,6 +103,10 @@ async function handleExport() {
 }
 .app-menu {
   border-right: none;
+}
+.menu-badge {
+  display: inline-flex;
+  align-items: center;
 }
 .app-header {
   background: #fff;

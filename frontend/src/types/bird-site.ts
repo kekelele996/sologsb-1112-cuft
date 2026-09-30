@@ -1,3 +1,5 @@
+import type { ConflictStatus, RecordSource } from './source';
+
 /** 生境类型 */
 export type Habitat = '芦苇湿地' | '滩涂' | '次生林' | '农田' | '城市绿地';
 
@@ -18,6 +20,16 @@ export interface BirdSite {
   netCount: number;
   /** 备注 */
   note?: string;
+  /** 来源：本站录入 / 摘录合并 */
+  source: RecordSource;
+  /** 摘录包 id（source='merge' 时） */
+  mergeId?: string;
+  /** 待确认：合并来的新鸟点在鸟点台账无对应点位时挂起，不进正式统计 */
+  pending?: boolean;
+  /** 冲突组 id（同一点位两版共用） */
+  conflictGroup?: string;
+  /** 冲突裁决状态：有效 / 待裁决 / 已废弃 */
+  conflictStatus?: ConflictStatus;
 }
 
 export const HABITATS: Habitat[] = ['芦苇湿地', '滩涂', '次生林', '农田', '城市绿地'];

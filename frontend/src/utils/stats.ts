@@ -2,6 +2,41 @@ import type { MeasureDeviation, MeasureKey, Morphometrics } from '../types/morph
 import { MEASURE_FIELDS } from '../types/morphometrics';
 import type { RingRecord, RingStatus } from '../types/ring-record';
 import type { SessionStats, SurveySession } from '../types/session';
+import type { BirdSite } from '../types/bird-site';
+
+/**
+ * 合并后的有效记录：
+ * - 无冲突组（本站录入或直接并入）→ 有效
+ * - 有冲突组 → 仅站里裁定的一版（conflictStatus='active'）有效，待裁决 / 已废弃不进统计
+ */
+export function isEffectiveRing(record: RingRecord): boolean {
+  return !record.conflictGroup || record.conflictStatus === 'active';
+}
+
+/** 有效鸟点：待确认（pending）或冲突待裁决的点位不进正式统计 */
+export function isEffectiveSite(site: BirdSite): boolean {
+  return !site.pending && (!site.conflictGroup || site.conflictStatus === 'active');
+}
+
+/** 有效调查批次：冲突待裁决的批次不进统计 */
+export function isEffectiveSession(session: SurveySession): boolean {
+  return !session.conflictGroup || session.conflictStatus === 'active';
+}
+
+/** 过滤出有效环志记录（统计台、批次统计、导出均按合并后的有效版本） */
+export function effectiveRings(records: RingRecord[]): RingRecord[] {
+  return records.filter(isEffectiveRing);
+}
+
+/** 过滤出有效鸟点（地图、生境分布、网位合计均不含待确认点位） */
+export function effectiveSites(sites: BirdSite[]): BirdSite[] {
+  return sites.filter(isEffectiveSite);
+}
+
+/** 过滤出有效调查批次 */
+export function effectiveSessions(sessions: SurveySession[]): SurveySession[] {
+  return sessions.filter(isEffectiveSession);
+}
 
 /** 常见环志鸟种目录（中文名 + 学名），供 SpeciesPicker 联想与自定义补充 */
 export const SPECIES_CATALOG: Array<{ cn: string; sci: string }> = [

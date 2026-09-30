@@ -2,6 +2,7 @@ import { defineStore } from 'pinia';
 import { db } from '../utils/db';
 import { uid } from '../utils/id';
 import { toPlain } from '../utils/plain';
+import { effectiveRings, isEffectiveRing } from '../utils/stats';
 import type { BirdAge, RingRecord, RingStatus } from '../types/ring-record';
 
 export interface RingInput {
@@ -32,16 +33,27 @@ export const useRingStore = defineStore('ring', {
   state: (): RingState => ({ rings: [], duplicateId: '', hydrated: false }),
 
   getters: {
+    /** 合并后的有效环志记录（待裁决 / 已废弃版本不进统计） */
+    effective(): RingRecord[] {
+      return effectiveRings(this.rings);
+    },
     findByRingNo(state) {
       return (ringNo: string): RingRecord | undefined =>
         state.rings.find((record) => record.ringNo.toLowerCase() === ringNo.trim().toLowerCase());
     },
-    /** 同一环号的全部历史记录（含重捕 / 回收） */
+    /** 同一环号的全部历史记录（含重捕 / 回收，含冲突两版） */
     historyOf(state) {
       return (ringNo: string): RingRecord[] =>
         state.rings
           .filter((record) => record.ringNo.toLowerCase() === ringNo.trim().toLowerCase())
           .sort((a, b) => a.ringDate.localeCompare(b.ringDate));
+    },
+    /** 某环号当前有效版本 */
+    effectiveOf(state) {
+      return (ringNo: string): RingRecord | undefined =>
+        state.rings.find(
+          (record) => record.ringNo.toLowerCase() === ringNo.trim().toLowerCase() && isEffectiveRing(record),
+        );
     },
     duplicate(state): RingRecord | undefined {
       return state.rings.find((record) => record.id === state.duplicateId);
@@ -80,6 +92,8 @@ export const useRingStore = defineStore('ring', {
         siteId: input.siteId,
         sessionId: input.sessionId,
         remark: input.remark?.trim() || undefined,
+        source: 'local',
+        conflictStatus: 'active',
       };
       await db.rings.put(toPlain(record));
       this.rings = [record, ...this.rings];

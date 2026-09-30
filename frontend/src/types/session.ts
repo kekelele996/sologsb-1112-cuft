@@ -1,3 +1,5 @@
+import type { ConflictStatus, RecordSource } from './source';
+
 /** 调查批次 */
 export interface SurveySession {
   id: string;
@@ -23,6 +25,14 @@ export interface SurveySession {
   leader: string;
   /** 备注 */
   remark?: string;
+  /** 来源：本站录入 / 摘录合并 */
+  source: RecordSource;
+  /** 摘录包 id（source='merge' 时） */
+  mergeId?: string;
+  /** 冲突组 id（同一批次两版共用） */
+  conflictGroup?: string;
+  /** 冲突裁决状态：有效 / 待裁决 / 已废弃 */
+  conflictStatus?: ConflictStatus;
 }
 
 /** 批次统计派生值 */

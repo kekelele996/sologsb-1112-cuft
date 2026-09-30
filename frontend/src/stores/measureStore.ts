@@ -59,6 +59,7 @@ export const useMeasureStore = defineStore('measure', {
         fatScore: Number(input.fatScore) || 0,
         measuredBy: input.measuredBy.trim(),
         measuredAt: input.measuredAt ?? new Date().toISOString(),
+        source: 'local',
       };
       await db.morphs.put(toPlain(morph));
       this.morphs = [morph, ...this.morphs];

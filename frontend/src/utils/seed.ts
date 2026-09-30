@@ -11,19 +11,19 @@ const dateDaysAgo = (n: number) => new Date(Date.now() - n * DAY).toISOString().
 const sciOf = (cn: string) => SPECIES_CATALOG.find((s) => s.cn === cn)?.sci ?? '';
 
 export const SEED_SITES: BirdSite[] = [
-  { id: 'site-001', siteNo: 'S-01', name: '大汶流芦苇荡', lng: 118.052, lat: 38.921, habitat: '芦苇湿地', netCount: 12, note: '主环志区，网阵沿堤布置' },
-  { id: 'site-002', siteNo: 'S-02', name: '新滩涂面', lng: 118.224, lat: 38.782, habitat: '滩涂', netCount: 8, note: '涉禽停歇地，涨潮时网位需调整' },
-  { id: 'site-003', siteNo: 'S-03', name: '孤岛林场', lng: 118.351, lat: 38.948, habitat: '次生林', netCount: 10, note: '林鸟为主' },
-  { id: 'site-004', siteNo: 'S-04', name: '稻改田片', lng: 117.852, lat: 38.704, habitat: '农田', netCount: 6 },
-  { id: 'site-005', siteNo: 'S-05', name: '湿地公园', lng: 118.118, lat: 39.052, habitat: '城市绿地', netCount: 5, note: '科普环志点' },
-  { id: 'site-006', siteNo: 'S-06', name: '黄河口南岸', lng: 118.602, lat: 38.856, habitat: '芦苇湿地', netCount: 14, note: '巡护兼顾环志' },
+  { id: 'site-001', siteNo: 'S-01', name: '大汶流芦苇荡', lng: 118.052, lat: 38.921, habitat: '芦苇湿地', netCount: 12, note: '主环志区，网阵沿堤布置', source: 'local', pending: false, conflictStatus: 'active' },
+  { id: 'site-002', siteNo: 'S-02', name: '新滩涂面', lng: 118.224, lat: 38.782, habitat: '滩涂', netCount: 8, note: '涉禽停歇地，涨潮时网位需调整', source: 'local', pending: false, conflictStatus: 'active' },
+  { id: 'site-003', siteNo: 'S-03', name: '孤岛林场', lng: 118.351, lat: 38.948, habitat: '次生林', netCount: 10, note: '林鸟为主', source: 'local', pending: false, conflictStatus: 'active' },
+  { id: 'site-004', siteNo: 'S-04', name: '稻改田片', lng: 117.852, lat: 38.704, habitat: '农田', netCount: 6, source: 'local', pending: false, conflictStatus: 'active' },
+  { id: 'site-005', siteNo: 'S-05', name: '湿地公园', lng: 118.118, lat: 39.052, habitat: '城市绿地', netCount: 5, note: '科普环志点', source: 'local', pending: false, conflictStatus: 'active' },
+  { id: 'site-006', siteNo: 'S-06', name: '黄河口南岸', lng: 118.602, lat: 38.856, habitat: '芦苇湿地', netCount: 14, note: '巡护兼顾环志', source: 'local', pending: false, conflictStatus: 'active' },
 ];
 
 export const SEED_SESSIONS: SurveySession[] = [
-  { id: 'session-001', sessionNo: '2024-A01', date: dateDaysAgo(21), siteId: 'site-001', startedAt: '05:00', endedAt: '11:00', netRounds: 6, cloudCover: 2, windForce: 2, closed: true, leader: '韩雪' },
-  { id: 'session-002', sessionNo: '2024-A02', date: dateDaysAgo(14), siteId: 'site-002', startedAt: '05:20', endedAt: '11:30', netRounds: 6, cloudCover: 5, windForce: 3, closed: true, leader: '韩雪' },
-  { id: 'session-003', sessionNo: '2024-A03', date: dateDaysAgo(7), siteId: 'site-003', startedAt: '05:10', endedAt: '11:00', netRounds: 6, cloudCover: 1, windForce: 2, closed: true, leader: '郑海' },
-  { id: 'session-004', sessionNo: '2024-A04', date: dateDaysAgo(2), siteId: 'site-001', startedAt: '05:30', endedAt: '11:00', netRounds: 6, cloudCover: 8, windForce: 4, closed: false, leader: '郑海', remark: '风力偏大，网次仅完成 4 次' },
+  { id: 'session-001', sessionNo: '2024-A01', date: dateDaysAgo(21), siteId: 'site-001', startedAt: '05:00', endedAt: '11:00', netRounds: 6, cloudCover: 2, windForce: 2, closed: true, leader: '韩雪', source: 'local', conflictStatus: 'active' },
+  { id: 'session-002', sessionNo: '2024-A02', date: dateDaysAgo(14), siteId: 'site-002', startedAt: '05:20', endedAt: '11:30', netRounds: 6, cloudCover: 5, windForce: 3, closed: true, leader: '韩雪', source: 'local', conflictStatus: 'active' },
+  { id: 'session-003', sessionNo: '2024-A03', date: dateDaysAgo(7), siteId: 'site-003', startedAt: '05:10', endedAt: '11:00', netRounds: 6, cloudCover: 1, windForce: 2, closed: true, leader: '郑海', source: 'local', conflictStatus: 'active' },
+  { id: 'session-004', sessionNo: '2024-A04', date: dateDaysAgo(2), siteId: 'site-001', startedAt: '05:30', endedAt: '11:00', netRounds: 6, cloudCover: 8, windForce: 4, closed: false, leader: '郑海', remark: '风力偏大，网次仅完成 4 次', source: 'local', conflictStatus: 'active' },
 ];
 
 function ring(
@@ -56,6 +56,8 @@ function ring(
     siteId,
     sessionId,
     remark,
+    source: 'local',
+    conflictStatus: 'active',
   };
 }
 
@@ -105,6 +107,7 @@ function morph(
     fatScore,
     measuredBy,
     measuredAt: isoDaysAgo(days),
+    source: 'local',
   };
 }
 

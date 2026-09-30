@@ -211,7 +211,21 @@ const historyRows = computed(() => ringStore.historyOf(historyRingNo.value));
 
     <el-card v-else shadow="never" class="block">
       <el-table :data="visible" size="small" border>
-        <el-table-column prop="ringNo" label="金属环号" width="110" />
+        <el-table-column label="金属环号" width="150">
+          <template #default="scope">
+            <div>{{ scope.row.ringNo }}</div>
+            <el-tag
+              v-if="scope.row.conflictStatus === 'pending'"
+              size="small"
+              type="warning"
+              effect="dark"
+              class="conflict-tag"
+            >待裁决</el-tag>
+            <el-tag v-else-if="scope.row.source === 'merge'" size="small" type="warning" effect="plain" class="conflict-tag">
+              野外摘录
+            </el-tag>
+          </template>
+        </el-table-column>
         <el-table-column prop="colorRing" label="彩环" width="100" />
         <el-table-column prop="speciesCn" label="鸟种" width="110" />
         <el-table-column prop="speciesSci" label="学名" min-width="170" show-overflow-tooltip />
@@ -348,5 +362,8 @@ const historyRows = computed(() => ringStore.historyOf(historyRingNo.value));
 }
 .ring-form {
   margin-top: 10px;
+}
+.conflict-tag {
+  margin-top: 2px;
 }
 </style>

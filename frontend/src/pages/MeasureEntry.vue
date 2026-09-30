@@ -48,12 +48,12 @@ const ringOptions = computed(() =>
 
 const selectedRing = computed(() => ringStore.rings.find((record) => record.id === selectedRingId.value));
 
-const meansBySpecies = computed(() => measureMeans(ringStore.rings, measureStore.morphs));
+const meansBySpecies = computed(() => measureMeans(ringStore.effective, measureStore.morphs));
 const currentMeans = computed(() => meansBySpecies.value[speciesCn.value]);
 const measuredSpeciesCount = computed(() =>
   new Set(
     measureStore.morphs
-      .map((morph) => ringStore.rings.find((record) => record.id === morph.ringId)?.speciesCn)
+      .map((morph) => ringStore.effective.find((record) => record.id === morph.ringId)?.speciesCn)
       .filter(Boolean) as string[],
   ).size,
 );

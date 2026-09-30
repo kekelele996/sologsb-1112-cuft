@@ -64,18 +64,23 @@ export async function importBackup(text: string): Promise<{ rings: number; morph
   if (!payload || payload.app !== 'gbbirdring') {
     throw new Error('备份文件格式不匹配（缺少 app=gbbirdring 标记）');
   }
+  // 兼容旧备份：恢复的记录补来源标记（视为本站录入）
+  const rings = (payload.rings ?? []).map((r) => ({ source: 'local', conflictStatus: 'active', ...(r as object) }));
+  const morphs = (payload.morphs ?? []).map((m) => ({ source: 'local', ...(m as object) }));
+  const sites = (payload.sites ?? []).map((s) => ({ source: 'local', pending: false, conflictStatus: 'active', ...(s as object) }));
+  const sessions = (payload.sessions ?? []).map((s) => ({ source: 'local', conflictStatus: 'active', ...(s as object) }));
   const counts = {
-    rings: payload.rings?.length ?? 0,
-    morphs: payload.morphs?.length ?? 0,
-    sites: payload.sites?.length ?? 0,
-    sessions: payload.sessions?.length ?? 0,
+    rings: rings.length,
+    morphs: morphs.length,
+    sites: sites.length,
+    sessions: sessions.length,
   };
   await db.transaction('rw', db.rings, db.morphs, db.sites, db.sessions, async () => {
     await Promise.all([db.rings.clear(), db.morphs.clear(), db.sites.clear(), db.sessions.clear()]);
-    if (payload.rings?.length) await db.rings.bulkPut(payload.rings as never[]);
-    if (payload.morphs?.length) await db.morphs.bulkPut(payload.morphs as never[]);
-    if (payload.sites?.length) await db.sites.bulkPut(payload.sites as never[]);
-    if (payload.sessions?.length) await db.sessions.bulkPut(payload.sessions as never[]);
+    if (rings.length) await db.rings.bulkPut(rings as never[]);
+    if (morphs.length) await db.morphs.bulkPut(morphs as never[]);
+    if (sites.length) await db.sites.bulkPut(sites as never[]);
+    if (sessions.length) await db.sessions.bulkPut(sessions as never[]);
   });
   return counts;
 }

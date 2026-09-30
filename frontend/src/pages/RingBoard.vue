@@ -20,11 +20,14 @@ const measureStore = useMeasureStore();
 const sessionStore = useSessionStore();
 const filter = useSiteFilter();
 
-const visibleSites = computed(() => filter.apply(siteStore.sites, sessionStore.sessions));
-const breakdown = computed(() => statusBreakdown(ringStore.rings));
-const speciesList = computed(() => speciesCount(ringStore.rings));
-const habitatStats = computed(() => sitesByHabitat(siteStore.sites));
-const recent = computed(() => ringStore.rings.slice(0, 6));
+// 统计按合并后的有效版本计算（待裁决 / 已废弃版本、待确认鸟点不进正式统计）
+const rings = computed(() => ringStore.effective);
+const sites = computed(() => siteStore.effective);
+const visibleSites = computed(() => filter.apply(sites.value, sessionStore.sessions));
+const breakdown = computed(() => statusBreakdown(rings.value));
+const speciesList = computed(() => speciesCount(rings.value));
+const habitatStats = computed(() => sitesByHabitat(sites.value));
+const recent = computed(() => rings.value.slice(0, 6));
 const siteNameOf = (siteId: string) => siteStore.siteName(siteId);
 
 /** SiteMap 选中点位（emit 回传点位 id）→ 用点位编号过滤鸟点列表与地图 */
@@ -44,7 +47,7 @@ function selectSite(siteId: string) {
 
     <el-row :gutter="12" class="stat-row">
       <el-col :xs="12" :md="6">
-        <StatBadge label="环志记录" :value="ringStore.rings.length" unit="条" />
+        <StatBadge label="环志记录" :value="rings.length" unit="条" />
       </el-col>
       <el-col :xs="12" :md="6">
         <StatBadge label="鸟种数" :value="speciesList.length" unit="种" status="success" />
@@ -53,7 +56,7 @@ function selectSite(siteId: string) {
         <StatBadge label="初捕 / 重捕 / 回收" :value="`${breakdown.初捕} / ${breakdown.重捕} / ${breakdown.回收}`" />
       </el-col>
       <el-col :xs="12" :md="6">
-        <StatBadge label="重捕率" :value="recaptureRate(ringStore.rings)" unit="%" status="warning" hint="重捕 / (初捕 + 重捕)" />
+        <StatBadge label="重捕率" :value="recaptureRate(rings)" unit="%" status="warning" hint="重捕 / (初捕 + 重捕)" />
       </el-col>
     </el-row>
 
@@ -63,17 +66,17 @@ function selectSite(siteId: string) {
           <template #header>
             <div class="card-head">
               <span>鸟点分布</span>
-              <span class="card-note">点位 {{ visibleSites.length }} / {{ siteStore.sites.length }} · 网位合计 {{ siteStore.totalNets }}</span>
+              <span class="card-note">点位 {{ visibleSites.length }} / {{ sites.length }} · 网位合计 {{ siteStore.totalNets }}</span>
             </div>
           </template>
           <FilterBar
             :fields="[
               { key: 'habitat', label: '生境', options: HABITATS, width: 120 },
-              { key: 'session', label: '作业时段', options: sessionStore.sessions.map((s) => s.sessionNo), width: 130 },
+              { key: 'session', label: '作业时段', options: sessionStore.effective.map((s) => s.sessionNo), width: 130 },
             ]"
             keyword-placeholder="搜索点位编号 / 名称"
             :result-count="visibleSites.length"
-            :total-count="siteStore.sites.length"
+            :total-count="sites.length"
           />
           <SiteMap :sites="visibleSites" @select="selectSite" />
         </el-card>

@@ -46,13 +46,13 @@ const rules: FormRules = {
   name: [{ required: true, message: '请输入点位名称', trigger: 'blur' }],
 };
 
-const visible = computed(() => filter.apply(siteStore.sites, sessionStore.sessions));
+const visible = computed(() => filter.apply(siteStore.effective, sessionStore.sessions));
 const selected = computed(() => siteStore.sites.find((site) => site.id === selectedId.value));
 
 /** 与已有点位的最小间距（km），用于提示点位过近 */
 const nearest = computed(() => {
   if (!selected.value) return undefined;
-  const others = siteStore.sites.filter((site) => site.id !== selected.value?.id);
+  const others = siteStore.effective.filter((site) => site.id !== selected.value?.id);
   if (others.length === 0) return undefined;
   return others
     .map((site) => ({ site, km: distanceKm(site, selected.value!) }))
@@ -63,7 +63,7 @@ function openCreate() {
   editingId.value = '';
   formRef.value?.clearValidate();
   form.value = {
-    siteNo: `S-${String(siteStore.sites.length + 1).padStart(2, '0')}`,
+    siteNo: `S-${String(siteStore.effective.length + 1).padStart(2, '0')}`,
     name: '',
     lng: 118.05,
     lat: 38.92,
@@ -140,17 +140,17 @@ async function remove(site: BirdSite) {
       <el-tag :type="amap.keyPresent ? 'success' : 'info'" effect="plain">
         高德 key：{{ amap.keyPresent ? '已配置' : '未配置（网格模式）' }}
       </el-tag>
-      <el-tag type="info" effect="plain">点位 {{ siteStore.sites.length }} 个 · 网位合计 {{ siteStore.totalNets }}</el-tag>
+      <el-tag type="info" effect="plain">点位 {{ siteStore.effective.length }} 个 · 网位合计 {{ siteStore.totalNets }}</el-tag>
     </div>
 
     <FilterBar
       :fields="[
         { key: 'habitat', label: '生境', options: HABITATS, width: 120 },
-        { key: 'session', label: '作业时段', options: sessionStore.sessions.map((s) => s.sessionNo), width: 130 },
+        { key: 'session', label: '作业时段', options: sessionStore.effective.map((s) => s.sessionNo), width: 130 },
       ]"
       keyword-placeholder="搜索点位编号 / 名称 / 备注"
       :result-count="visible.length"
-      :total-count="siteStore.sites.length"
+      :total-count="siteStore.effective.length"
     />
 
     <EmptyPanel v-if="visible.length === 0" description="没有符合条件的鸟点" action-text="重置筛选条件" @action="filter.reset()" />
@@ -230,7 +230,7 @@ async function remove(site: BirdSite) {
         </el-col>
         <el-col :xs="24" :md="13">
           <div class="pick-title">点击地图 / 网格拾取坐标（当前 {{ form.lng }}°E, {{ form.lat }}°N）</div>
-          <SiteMap :sites="siteStore.sites" :selected-id="editingId" :height="300" pickable @pick="handlePick" />
+          <SiteMap :sites="siteStore.effective" :selected-id="editingId" :height="300" pickable @pick="handlePick" />
         </el-col>
       </el-row>
       <template #footer>

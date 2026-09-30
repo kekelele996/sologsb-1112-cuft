@@ -2,6 +2,7 @@ import { defineStore } from 'pinia';
 import { db } from '../utils/db';
 import { uid } from '../utils/id';
 import { toPlain } from '../utils/plain';
+import { effectiveSessions } from '../utils/stats';
 import type { SurveySession } from '../types/session';
 
 export interface SessionInput {
@@ -27,17 +28,21 @@ export const useSessionStore = defineStore('session', {
   state: (): SessionState => ({ sessions: [], hydrated: false }),
 
   getters: {
+    /** 有效批次（冲突待裁决版本不进统计） */
+    effective(): SurveySession[] {
+      return effectiveSessions(this.sessions);
+    },
     byId(state) {
       return (id: string): SurveySession | undefined => state.sessions.find((session) => session.id === id);
     },
     sessionOptions(state): Array<{ label: string; value: string }> {
-      return state.sessions.map((session) => ({
+      return effectiveSessions(state.sessions).map((session) => ({
         label: `${session.sessionNo} · ${session.date} · ${session.closed ? '已关闭' : '进行中'}`,
         value: session.id,
       }));
     },
     openSessions(state): SurveySession[] {
-      return state.sessions.filter((session) => !session.closed);
+      return effectiveSessions(state.sessions).filter((session) => !session.closed);
     },
   },
 
@@ -61,6 +66,8 @@ export const useSessionStore = defineStore('session', {
         closed: false,
         leader: input.leader.trim(),
         remark: input.remark?.trim() || undefined,
+        source: 'local',
+        conflictStatus: 'active',
       };
       await db.sessions.put(toPlain(session));
       this.sessions = [session, ...this.sessions];
