@@ -1,0 +1,19 @@
+# 顶层层名兜底：避免中文目录名导致 compose 项目名为空
+name: gbbirdring
+
+services:
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      # 可选构建参数：传入后地图使用高德 JS API；不传则自动退化为本地 SVG 网格视图，构建不依赖该 key
+      args:
+        VITE_AMAP_KEY: ${VITE_AMAP_KEY:-}
+    container_name: ${COMPOSE_PROJECT_NAME:-gbbirdring}-frontend
+    image: ${COMPOSE_PROJECT_NAME:-gbbirdring}-frontend:latest
+    restart: unless-stopped
+    ports:
+      - "${FRONTEND_PORT:-21812}:80"
+    environment:
+      - TZ=Asia/Shanghai
+    # 纯前端应用：数据只存浏览器本地，无数据库服务、不挂载命名卷
