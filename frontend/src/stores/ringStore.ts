@@ -2,6 +2,7 @@ import { defineStore } from 'pinia';
 import { db } from '../utils/db';
 import { uid } from '../utils/id';
 import { toPlain } from '../utils/plain';
+import { useSiteStore } from './siteStore';
 import type { BirdAge, RingRecord, RingStatus } from '../types/ring-record';
 
 export interface RingInput {
@@ -46,12 +47,42 @@ export const useRingStore = defineStore('ring', {
     duplicate(state): RingRecord | undefined {
       return state.rings.find((record) => record.id === state.duplicateId);
     },
+    /**
+     * 合并后的正式环志记录：剔除冲突留档版（未采用）与待确认鸟点上的记录。
+     * 环志记录、调查批次统计和导出表统一以它为准。
+     */
+    officialRings(state): RingRecord[] {
+      const siteStore = useSiteStore();
+      const confirmedSites = new Set(siteStore.sites.filter((site) => site.status === 'confirmed').map((site) => site.id));
+      return state.rings.filter((record) => !record.superseded && confirmedSites.has(record.siteId));
+    },
+    /** 待站里定版的冲突组（按 conflictGroup 聚合） */
+    conflictGroups(state): Array<{ groupId: string; ringNo: string; versions: RingRecord[] }> {
+      const map = new Map<string, RingRecord[]>();
+      state.rings.forEach((record) => {
+        if (!record.conflictGroup) return;
+        const list = map.get(record.conflictGroup) ?? [];
+        list.push(record);
+        map.set(record.conflictGroup, list);
+      });
+      return Array.from(map.entries())
+        .filter(([, versions]) => versions.length > 1)
+        .map(([groupId, versions]) => ({
+          groupId,
+          ringNo: versions[0]?.ringNo ?? '',
+          versions: [...versions].sort((a, b) => a.ringDate.localeCompare(b.ringDate)),
+        }));
+    },
   },
 
   actions: {
     async hydrate() {
-      this.rings = await db.rings.orderBy('ringDate').reverse().toArray();
+      await this.reload();
       this.hydrated = true;
+    },
+
+    async reload() {
+      this.rings = await db.rings.orderBy('ringDate').reverse().toArray();
     },
 
     setDuplicate(id: string) {
@@ -80,6 +111,10 @@ export const useRingStore = defineStore('ring', {
         siteId: input.siteId,
         sessionId: input.sessionId,
         remark: input.remark?.trim() || undefined,
+        source: 'station',
+        origin: '站里',
+        conflictGroup: '',
+        superseded: false,
       };
       await db.rings.put(toPlain(record));
       this.rings = [record, ...this.rings];

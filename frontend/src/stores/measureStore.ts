@@ -42,8 +42,12 @@ export const useMeasureStore = defineStore('measure', {
 
   actions: {
     async hydrate() {
-      this.morphs = await db.morphs.orderBy('measuredAt').reverse().toArray();
+      await this.reload();
       this.hydrated = true;
+    },
+
+    async reload() {
+      this.morphs = await db.morphs.orderBy('measuredAt').reverse().toArray();
     },
 
     async addMorph(input: MorphInput): Promise<Morphometrics> {
@@ -59,6 +63,8 @@ export const useMeasureStore = defineStore('measure', {
         fatScore: Number(input.fatScore) || 0,
         measuredBy: input.measuredBy.trim(),
         measuredAt: input.measuredAt ?? new Date().toISOString(),
+        source: 'station',
+        origin: '站里',
       };
       await db.morphs.put(toPlain(morph));
       this.morphs = [morph, ...this.morphs];

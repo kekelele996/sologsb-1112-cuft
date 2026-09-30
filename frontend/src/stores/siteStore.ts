@@ -35,12 +35,23 @@ export const useSiteStore = defineStore('site', {
     totalNets(state): number {
       return state.sites.reduce((sum, site) => sum + site.netCount, 0);
     },
+    /** 正式点位（已确认）；待确认点位不进正式统计 */
+    confirmedSites(state): BirdSite[] {
+      return state.sites.filter((site) => site.status === 'confirmed');
+    },
+    pendingSites(state): BirdSite[] {
+      return state.sites.filter((site) => site.status === 'pending');
+    },
   },
 
   actions: {
     async hydrate() {
-      this.sites = await db.sites.orderBy('siteNo').toArray();
+      await this.reload();
       this.hydrated = true;
+    },
+
+    async reload() {
+      this.sites = await db.sites.orderBy('siteNo').toArray();
     },
 
     setMapMode(mode: MapMode) {
@@ -57,6 +68,9 @@ export const useSiteStore = defineStore('site', {
         habitat: input.habitat,
         netCount: Number(input.netCount) || 0,
         note: input.note?.trim() || undefined,
+        source: 'station',
+        origin: '站里',
+        status: 'confirmed',
       };
       await db.sites.put(toPlain(site));
       this.sites = [...this.sites, site].sort((a, b) => a.siteNo.localeCompare(b.siteNo));
@@ -74,6 +88,15 @@ export const useSiteStore = defineStore('site', {
     async removeSite(id: string) {
       await db.sites.delete(id);
       this.sites = this.sites.filter((site) => site.id !== id);
+    },
+
+    /** 确认 / 退回合并来的待确认点位 */
+    async setStatus(id: string, status: BirdSite['status']) {
+      const current = this.sites.find((site) => site.id === id);
+      if (!current) return;
+      const next: BirdSite = { ...current, status };
+      await db.sites.put(toPlain(next));
+      this.sites = this.sites.map((site) => (site.id === id ? next : site));
     },
   },
 });

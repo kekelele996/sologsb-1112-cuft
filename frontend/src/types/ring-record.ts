@@ -1,4 +1,6 @@
 /** 年龄 */
+import type { RecordSource } from './source';
+
 export type BirdAge = '幼' | '亚成' | '成';
 
 /** 环志状态 */
@@ -33,6 +35,21 @@ export interface RingRecord {
   sessionId: string;
   /** 备注 */
   remark?: string;
+  /** 数据来源：站里录入 / 野外离线合并（老数据升级时补 station） */
+  source: RecordSource;
+  /** 来源标记：野外小组 / 设备名（站里录入为录入人所在站，默认「站里」） */
+  origin: string;
+  /**
+   * 冲突组 id：同一只鸟（同环号）两边都改过时，两版归入同一组。
+   * 未冲突的记录为空。
+   */
+  conflictGroup?: string;
+  /** 该记录是否为冲突组里未被采用的留档版本（采用版参与统计/导出，留档版不参与） */
+  superseded?: boolean;
+  /** 合并写入时间（非合并记录为空） */
+  mergedAt?: string;
+  /** 所属摘录包 id（非合并记录为空） */
+  packageId?: string;
 }
 
 /** 金属环号格式：一般为「环前缀-序号」，如 A-12345 */

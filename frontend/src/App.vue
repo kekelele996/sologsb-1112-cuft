@@ -2,9 +2,9 @@
 import { onMounted, ref } from 'vue';
 import { useRoute } from 'vue-router';
 import { ElMessage } from 'element-plus';
-import { Download } from '@element-plus/icons-vue';
+import { Download, Document } from '@element-plus/icons-vue';
 import { seedIfEmpty } from './utils/seed';
-import { downloadText, exportBackupJson } from './utils/export';
+import { downloadText, exportBackupJson, downloadCsv, ringExportRows, RING_EXPORT_COLUMNS } from './utils/export';
 import { useRingStore } from './stores/ringStore';
 import { useMeasureStore } from './stores/measureStore';
 import { useSiteStore } from './stores/siteStore';
@@ -41,6 +41,17 @@ async function handleExport() {
   downloadText(`gbbirdring-backup-${new Date().toISOString().slice(0, 10)}.json`, json);
   ElMessage.success('已导出 IndexedDB 全量 JSON 备份');
 }
+
+/** 导出表：按合并后的正式结果（采用版 + 已确认鸟点），并附来源列 */
+function handleExportCsv() {
+  const rows = ringExportRows(ringStore.officialRings, siteStore.confirmedSites);
+  if (rows.length === 0) {
+    ElMessage.warning('当前没有可导出的正式环志记录（待确认鸟点 / 留档版本不计入）');
+    return;
+  }
+  downloadCsv(`gbbirdring-rings-${new Date().toISOString().slice(0, 10)}.csv`, rows as never[], RING_EXPORT_COLUMNS as never[]);
+  ElMessage.success(`已导出合并后的正式环志表 ${rows.length} 条（含来源）`);
+}
 </script>
 
 <template>
@@ -56,6 +67,7 @@ async function handleExport() {
         <el-menu-item index="/measure">量度测量</el-menu-item>
         <el-menu-item index="/sites">鸟点台账</el-menu-item>
         <el-menu-item index="/sessions">调查批次</el-menu-item>
+        <el-menu-item index="/merge">离线合并</el-menu-item>
       </el-menu>
     </el-aside>
     <el-container>
@@ -66,6 +78,7 @@ async function handleExport() {
             地图模式：{{ amap.keyPresent ? '高德 JS API' : '本地 SVG 网格' }}
           </el-tag>
           <el-button :icon="Download" @click="handleExport">导出备份</el-button>
+          <el-button :icon="Document" @click="handleExportCsv">导出环志表</el-button>
         </span>
       </el-header>
       <el-main v-loading="!ready" element-loading-text="正在装载本地环志档案…" class="app-main">

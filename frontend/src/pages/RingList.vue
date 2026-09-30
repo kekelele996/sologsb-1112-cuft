@@ -10,8 +10,10 @@ import { useRingStore } from '../stores/ringStore';
 import { useSiteStore } from '../stores/siteStore';
 import { useSessionStore } from '../stores/sessionStore';
 import { BIRD_AGES, RING_STATUSES, STATUS_COLOR, type BirdAge, type RingRecord, type RingStatus } from '../types/ring-record';
+import { SOURCE_LABEL } from '../types/source';
 import { formatDate } from '../utils/format';
 import { speciesCount } from '../utils/stats';
+import { downloadCsv, ringExportRows, RING_EXPORT_COLUMNS } from '../utils/export';
 
 const route = useRoute();
 const ringStore = useRingStore();
@@ -68,12 +70,21 @@ const statusParam = computed(() => (typeof route.query.status === 'string' ? rou
 const sessionParam = computed(() => (typeof route.query.session === 'string' ? route.query.session : ''));
 const sessionSelectParam = computed(() => (typeof route.query.sessionSelect === 'string' ? route.query.sessionSelect : ''));
 
+/** 是否把留档版 / 待确认鸟点记录也显示出来（它们始终不进正式统计/导出） */
+const showAll = ref(false);
+const sourceFilter = ref<'all' | 'station' | 'field'>('all');
+
+/** 正式口径环志（采用版 + 已确认鸟点）；查看全部时才并入留档/待确认记录 */
+const scopedRings = computed(() => (showAll.value ? ringStore.rings : ringStore.officialRings));
+const pendingSiteIds = computed(() => new Set(siteStore.pendingSites.map((site) => site.id)));
+
 const visible = computed(() => {
   const kw = kwParam.value.trim().toLowerCase();
-  return ringStore.rings.filter((record) => {
+  return scopedRings.value.filter((record) => {
     if (speciesParam.value && record.speciesCn !== speciesParam.value) return false;
     if (statusParam.value && record.status !== statusParam.value) return false;
     if (sessionSelectParam.value && record.sessionId !== sessionSelectParam.value) return false;
+    if (sourceFilter.value !== 'all' && record.source !== sourceFilter.value) return false;
     if (kw) {
       const haystack = `${record.ringNo} ${record.colorRing} ${record.speciesCn} ${record.speciesSci} ${record.ringer} ${record.netNo}`.toLowerCase();
       if (!haystack.includes(kw)) return false;
@@ -89,7 +100,18 @@ const existedRecord = computed(() => {
 });
 const existedHistory = computed(() => (existedRecord.value ? ringStore.historyOf(form.value.ringNo) : []));
 
-const entityOptions = computed(() => speciesCount(ringStore.rings).map((item) => item.speciesCn));
+const entityOptions = computed(() => speciesCount(scopedRings.value).map((item) => item.speciesCn));
+
+/** 导出当前正式口径环志表（含来源列）；留档版 / 待确认鸟点记录不导出 */
+function exportCsv() {
+  const rows = ringExportRows(ringStore.officialRings, siteStore.confirmedSites);
+  if (rows.length === 0) {
+    ElMessage.warning('当前没有可导出的正式环志记录');
+    return;
+  }
+  downloadCsv(`gbbirdring-rings-${new Date().toISOString().slice(0, 10)}.csv`, rows as never[], RING_EXPORT_COLUMNS as never[]);
+  ElMessage.success(`已导出正式环志表 ${rows.length} 条（按合并后结果，含来源）`);
+}
 
 function openCreate() {
   editingId.value = '';
@@ -167,6 +189,12 @@ async function submit() {
   dialogVisible.value = false;
 }
 
+function rowClassName(scope: { row: RingRecord }): string {
+  if (scope.row.superseded) return 'row-superseded';
+  if (pendingSiteIds.value.has(scope.row.siteId)) return 'row-pending';
+  return '';
+}
+
 function showHistory(ringNo: string) {
   historyRingNo.value = ringNo;
   historyVisible.value = true;
@@ -191,6 +219,13 @@ const historyRows = computed(() => ringStore.historyOf(historyRingNo.value));
 
     <div class="toolbar">
       <el-button type="primary" @click="openCreate">登记环志记录</el-button>
+      <el-button @click="exportCsv">导出环志表 CSV</el-button>
+      <el-radio-group v-model="sourceFilter" size="small">
+        <el-radio-button label="all">全部来源</el-radio-button>
+        <el-radio-button label="station">站里</el-radio-button>
+        <el-radio-button label="field">野外</el-radio-button>
+      </el-radio-group>
+      <el-checkbox v-model="showAll">显示留档版 / 待确认鸟点记录</el-checkbox>
       <el-tag v-if="ringStore.duplicate" type="warning" effect="plain">
         查重命中：{{ ringStore.duplicate.ringNo }}（{{ ringStore.duplicate.speciesCn }}）
       </el-tag>
@@ -210,25 +245,43 @@ const historyRows = computed(() => ringStore.historyOf(historyRingNo.value));
     <EmptyPanel v-if="visible.length === 0" description="没有符合条件的环志记录" action-text="登记环志记录" @action="openCreate" />
 
     <el-card v-else shadow="never" class="block">
-      <el-table :data="visible" size="small" border>
+      <el-table
+        :data="visible"
+        size="small"
+        border
+        :row-class-name="rowClassName"
+      >
         <el-table-column prop="ringNo" label="金属环号" width="110" />
         <el-table-column prop="colorRing" label="彩环" width="100" />
         <el-table-column prop="speciesCn" label="鸟种" width="110" />
         <el-table-column prop="speciesSci" label="学名" min-width="170" show-overflow-tooltip />
-        <el-table-column prop="age" label="年龄" width="80" />
+        <el-table-column prop="age" label="年龄" width="70" />
         <el-table-column label="环志日期" width="110">
           <template #default="scope">{{ formatDate(scope.row.ringDate) }}</template>
         </el-table-column>
         <el-table-column prop="netNo" label="网号" width="90" />
-        <el-table-column prop="netRound" label="网次" width="70" align="right" />
-        <el-table-column label="状态" width="90">
+        <el-table-column prop="netRound" label="网次" width="60" align="right" />
+        <el-table-column label="状态" width="80">
           <template #default="scope">
             <el-tag :type="STATUS_COLOR[scope.row.status as RingStatus]" size="small">{{ scope.row.status }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="ringer" label="环志人" width="90" />
-        <el-table-column label="鸟点" width="140">
-          <template #default="scope">{{ siteStore.siteName(scope.row.siteId) }}</template>
+        <el-table-column prop="ringer" label="环志人" width="80" />
+        <el-table-column label="来源" width="100">
+          <template #default="scope">
+            <el-tag :type="scope.row.source === 'field' ? 'warning' : 'success'" size="small" effect="plain">
+              {{ SOURCE_LABEL[scope.row.source as 'station' | 'field'] }}
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column label="鸟点 / 版本" width="170">
+          <template #default="scope">
+            <div class="cell-stack">
+              <span>{{ siteStore.siteName(scope.row.siteId) }}</span>
+              <el-tag v-if="scope.row.superseded" type="info" size="small">留档（未定版）</el-tag>
+              <el-tag v-else-if="pendingSiteIds.has(scope.row.siteId)" type="warning" size="small">鸟点待确认</el-tag>
+            </div>
+          </template>
         </el-table-column>
         <el-table-column label="操作" width="200" fixed="right">
           <template #default="scope">
@@ -348,5 +401,18 @@ const historyRows = computed(() => ringStore.historyOf(historyRingNo.value));
 }
 .ring-form {
   margin-top: 10px;
+}
+.cell-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 12px;
+}
+:deep(.row-superseded) {
+  color: #9aa6b2;
+  background: #fafafa;
+}
+:deep(.row-pending) {
+  background: #fffaf0;
 }
 </style>

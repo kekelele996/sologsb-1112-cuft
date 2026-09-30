@@ -13,9 +13,9 @@ import { formatDateTime } from '../utils/format';
 const ringStore = useRingStore();
 const measureStore = useMeasureStore();
 
-const selectedRingId = ref(ringStore.rings[0]?.id ?? '');
-const speciesCn = ref(ringStore.rings[0]?.speciesCn ?? '红喉歌鸲');
-const speciesSci = ref(ringStore.rings[0]?.speciesSci ?? 'Calliope calliope');
+const selectedRingId = ref(ringStore.officialRings[0]?.id ?? '');
+const speciesCn = ref(ringStore.officialRings[0]?.speciesCn ?? '红喉歌鸲');
+const speciesSci = ref(ringStore.officialRings[0]?.speciesSci ?? 'Calliope calliope');
 const dialogVisible = ref(false);
 const editingId = ref('');
 const formRef = ref<FormInstance>();
@@ -43,12 +43,12 @@ const rules: FormRules = {
 };
 
 const ringOptions = computed(() =>
-  ringStore.rings.map((record) => ({ label: `${record.ringNo} · ${record.speciesCn} · ${record.netNo}`, value: record.id })),
+  ringStore.officialRings.map((record) => ({ label: `${record.ringNo} · ${record.speciesCn} · ${record.netNo}`, value: record.id })),
 );
 
 const selectedRing = computed(() => ringStore.rings.find((record) => record.id === selectedRingId.value));
 
-const meansBySpecies = computed(() => measureMeans(ringStore.rings, measureStore.morphs));
+const meansBySpecies = computed(() => measureMeans(ringStore.officialRings, measureStore.morphs));
 const currentMeans = computed(() => meansBySpecies.value[speciesCn.value]);
 const measuredSpeciesCount = computed(() =>
   new Set(

@@ -1,4 +1,6 @@
 /** 量度项目键 */
+import type { RecordSource } from './source';
+
 export type MeasureKey =
   | 'billLength'
   | 'billWidth'
@@ -30,6 +32,12 @@ export interface Morphometrics {
   measuredBy: string;
   /** 测量时间 ISO */
   measuredAt: string;
+  /** 数据来源（老数据升级补 station） */
+  source: RecordSource;
+  /** 来源小组 / 设备名 */
+  origin: string;
+  mergedAt?: string;
+  packageId?: string;
 }
 
 /** 量度字段定义（单位与常见范围），供 MeasureInput 与偏离提示使用 */

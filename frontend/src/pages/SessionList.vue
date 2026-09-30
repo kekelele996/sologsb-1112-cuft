@@ -57,9 +57,12 @@ const rules: FormRules = {
 const siteParam = computed(() => (typeof route.query.site === 'string' ? route.query.site : ''));
 const closedParam = computed(() => (typeof route.query.closed === 'string' ? route.query.closed : ''));
 
+/** 正式鸟点集合：待确认鸟点上的环志不进批次统计 */
+const confirmedSiteIds = computed(() => new Set(siteStore.confirmedSites.map((site) => site.id)));
+
 const statsList = computed<SessionStats[]>(() =>
   sessionStore.sessions
-    .map((session) => buildSessionStats(session, ringStore.rings, siteStore.siteName(session.siteId)))
+    .map((session) => buildSessionStats(session, ringStore.officialRings, siteStore.siteName(session.siteId), confirmedSiteIds.value))
     .filter((item) => {
       if (siteParam.value && siteStore.siteName(item.session.siteId) !== siteParam.value) return false;
       if (closedParam.value === '已关闭' && !item.session.closed) return false;
@@ -74,7 +77,7 @@ const averageRecapture = computed(() => {
   if (list.length === 0) return 0;
   return Number((list.reduce((sum, item) => sum + item.recaptureRate, 0) / list.length).toFixed(1));
 });
-const totalSpecies = computed(() => new Set(ringStore.rings.map((record) => record.speciesCn)).size);
+const totalSpecies = computed(() => new Set(ringStore.officialRings.map((record) => record.speciesCn)).size);
 
 const detail = computed(() => statsList.value.find((item) => item.session.id === detailId.value));
 
@@ -139,7 +142,7 @@ async function submit() {
 }
 
 async function close(session: SurveySession) {
-  const stats = buildSessionStats(session, ringStore.rings, siteStore.siteName(session.siteId));
+  const stats = buildSessionStats(session, ringStore.officialRings, siteStore.siteName(session.siteId), confirmedSiteIds.value);
   const confirmed = await ElMessageBox.confirm(
     `关闭批次 ${session.sessionNo} 后出统计：鸟种 ${stats.speciesCount} 种、初捕 ${stats.firstCount}、重捕 ${stats.recaptureCount}。确认关闭？`,
     '关闭批次',

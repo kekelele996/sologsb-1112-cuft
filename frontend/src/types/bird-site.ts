@@ -1,4 +1,6 @@
 /** 生境类型 */
+import type { RecordSource, SiteStatus } from './source';
+
 export type Habitat = '芦苇湿地' | '滩涂' | '次生林' | '农田' | '城市绿地';
 
 /** 鸟点 */
@@ -18,6 +20,15 @@ export interface BirdSite {
   netCount: number;
   /** 备注 */
   note?: string;
+  /** 数据来源（老数据升级补 station） */
+  source: RecordSource;
+  /** 来源小组 / 设备名 */
+  origin: string;
+  /** 确认状态：合并来的陌生点位先挂 pending，确认后才进正式统计 */
+  status: SiteStatus;
+  /** 待确认原因 / 合并写入时间 */
+  mergedAt?: string;
+  packageId?: string;
 }
 
 export const HABITATS: Habitat[] = ['芦苇湿地', '滩涂', '次生林', '农田', '城市绿地'];

@@ -58,9 +58,12 @@ function labelX(col: number): number {
 function markerContent(site: BirdSite): string {
   const color = habitatColor(site.habitat);
   const selected = props.selectedId === site.id;
+  const pending = site.status === 'pending';
+  const ring = pending ? `border:2px dashed #e6a23c;box-shadow:0 0 0 2px ${selected ? '#c62828' : 'rgba(230,162,60,.45)'}` : `border:2px solid #fff;box-shadow:0 0 0 2px ${selected ? '#c62828' : 'rgba(0,0,0,.18)'}`;
+  const suffix = pending ? '<span style="color:#e6a23c;font-weight:600">（待确认）</span>' : '';
   return `<div style="transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;cursor:pointer">
-    <div style="width:${selected ? 20 : 14}px;height:${selected ? 20 : 14}px;border-radius:50%;background:${color};border:2px solid #fff;box-shadow:0 0 0 2px ${selected ? '#c62828' : 'rgba(0,0,0,.18)'}"></div>
-    <div style="margin-top:2px;font-size:11px;color:#33414d;background:rgba(255,255,255,.86);padding:0 3px;border-radius:3px;white-space:nowrap">${site.siteNo} ${site.name}</div>
+    <div style="width:${selected ? 20 : 14}px;height:${selected ? 20 : 14}px;border-radius:50%;background:${color};${ring}"></div>
+    <div style="margin-top:2px;font-size:11px;color:#33414d;background:rgba(255,255,255,.86);padding:0 3px;border-radius:3px;white-space:nowrap">${site.siteNo} ${site.name}${suffix}</div>
   </div>`;
 }
 
@@ -136,7 +139,7 @@ watch(effectiveMode, (mode) => {
 });
 
 watch(
-  () => props.sites.map((site) => `${site.id}:${site.lng}:${site.lat}:${site.habitat}`).join('|') + `#${props.selectedId}`,
+  () => props.sites.map((site) => `${site.id}:${site.lng}:${site.lat}:${site.habitat}:${site.status}`).join('|') + `#${props.selectedId}`,
   () => {
     if (effectiveMode.value === 'amap') {
       void renderAmap();
@@ -206,17 +209,18 @@ onBeforeUnmount(() => {
             :cy="(item.cell.row + 0.5) * CELL_H"
             :r="selectedId === item.site.id ? 11 : 8"
             :fill="habitatColor(item.site.habitat)"
-            stroke="#fff"
-            stroke-width="2"
+            :stroke="item.site.status === 'pending' ? '#e6a23c' : '#fff'"
+            :stroke-width="item.site.status === 'pending' ? 2.5 : 2"
+            :stroke-dasharray="item.site.status === 'pending' ? '3 2' : undefined"
           />
           <text
             :x="labelX(item.cell.col)"
             :y="(item.cell.row + 0.5) * CELL_H - 14"
             font-size="11"
-            fill="#33414d"
+            :fill="item.site.status === 'pending' ? '#b8770a' : '#33414d'"
             text-anchor="middle"
           >
-            {{ item.site.siteNo }} {{ item.site.name }}
+            {{ item.site.siteNo }} {{ item.site.name }}{{ item.site.status === 'pending' ? '（待确认）' : '' }}
           </text>
           <text :x="(item.cell.col + 0.5) * CELL_W" :y="(item.cell.row + 0.5) * CELL_H + 4" font-size="10" fill="#fff" text-anchor="middle">
             {{ item.site.netCount }}

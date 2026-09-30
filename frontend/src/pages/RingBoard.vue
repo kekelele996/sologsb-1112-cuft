@@ -20,12 +20,14 @@ const measureStore = useMeasureStore();
 const sessionStore = useSessionStore();
 const filter = useSiteFilter();
 
-const visibleSites = computed(() => filter.apply(siteStore.sites, sessionStore.sessions));
-const breakdown = computed(() => statusBreakdown(ringStore.rings));
-const speciesList = computed(() => speciesCount(ringStore.rings));
-const habitatStats = computed(() => sitesByHabitat(siteStore.sites));
-const recent = computed(() => ringStore.rings.slice(0, 6));
+const visibleSites = computed(() => filter.apply(siteStore.confirmedSites, sessionStore.sessions));
+const breakdown = computed(() => statusBreakdown(ringStore.officialRings));
+const speciesList = computed(() => speciesCount(ringStore.officialRings));
+const habitatStats = computed(() => sitesByHabitat(siteStore.confirmedSites));
+const recent = computed(() => ringStore.officialRings.slice(0, 6));
 const siteNameOf = (siteId: string) => siteStore.siteName(siteId);
+const pendingCount = computed(() => siteStore.pendingSites.length);
+const conflictCount = computed(() => ringStore.conflictGroups.length);
 
 /** SiteMap 选中点位（emit 回传点位 id）→ 用点位编号过滤鸟点列表与地图 */
 function selectSite(siteId: string) {
@@ -39,12 +41,22 @@ function selectSite(siteId: string) {
     <h2 class="page-title">鸟类环志统计台</h2>
     <p class="page-desc">
       登记环志编号、鸟种与量度，查看鸟点分布（高德地图 JS API，未配置 VITE_AMAP_KEY 时自动退化为本地 SVG 网格视图）。数据保存在浏览器
-      IndexedDB（gbbirdring-db）。
+      IndexedDB（gbbirdring-db）。统计为合并后的正式口径：冲突留档版与待确认鸟点不参与。
     </p>
+
+    <el-alert
+      v-if="pendingCount || conflictCount"
+      class="notice-bar"
+      type="warning"
+      show-icon
+      :closable="false"
+      title="有待处理的离线合并事项"
+      :description="`${conflictCount ? `待站里定版冲突 ${conflictCount} 组；` : ''}${pendingCount ? `待确认鸟点 ${pendingCount} 个（暂不进正式统计）；` : ''}请到「离线合并」页处理。`"
+    />
 
     <el-row :gutter="12" class="stat-row">
       <el-col :xs="12" :md="6">
-        <StatBadge label="环志记录" :value="ringStore.rings.length" unit="条" />
+        <StatBadge label="正式环志记录" :value="ringStore.officialRings.length" unit="条" />
       </el-col>
       <el-col :xs="12" :md="6">
         <StatBadge label="鸟种数" :value="speciesList.length" unit="种" status="success" />
@@ -53,7 +65,7 @@ function selectSite(siteId: string) {
         <StatBadge label="初捕 / 重捕 / 回收" :value="`${breakdown.初捕} / ${breakdown.重捕} / ${breakdown.回收}`" />
       </el-col>
       <el-col :xs="12" :md="6">
-        <StatBadge label="重捕率" :value="recaptureRate(ringStore.rings)" unit="%" status="warning" hint="重捕 / (初捕 + 重捕)" />
+        <StatBadge label="重捕率" :value="recaptureRate(ringStore.officialRings)" unit="%" status="warning" hint="重捕 / (初捕 + 重捕)" />
       </el-col>
     </el-row>
 
@@ -63,7 +75,7 @@ function selectSite(siteId: string) {
           <template #header>
             <div class="card-head">
               <span>鸟点分布</span>
-              <span class="card-note">点位 {{ visibleSites.length }} / {{ siteStore.sites.length }} · 网位合计 {{ siteStore.totalNets }}</span>
+              <span class="card-note">正式点位 {{ visibleSites.length }} / {{ siteStore.confirmedSites.length }} · 网位合计 {{ siteStore.confirmedSites.reduce((sum, s) => sum + s.netCount, 0) }}</span>
             </div>
           </template>
           <FilterBar
@@ -73,7 +85,7 @@ function selectSite(siteId: string) {
             ]"
             keyword-placeholder="搜索点位编号 / 名称"
             :result-count="visibleSites.length"
-            :total-count="siteStore.sites.length"
+            :total-count="siteStore.confirmedSites.length"
           />
           <SiteMap :sites="visibleSites" @select="selectSite" />
         </el-card>
@@ -132,6 +144,9 @@ function selectSite(siteId: string) {
   margin: 0 0 14px;
   color: #6f8480;
   font-size: 13px;
+}
+.notice-bar {
+  margin-bottom: 12px;
 }
 .stat-row {
   margin-bottom: 12px;

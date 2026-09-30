@@ -1,4 +1,6 @@
 /** 调查批次 */
+import type { RecordSource } from './source';
+
 export interface SurveySession {
   id: string;
   /** 批次号 */
@@ -23,6 +25,12 @@ export interface SurveySession {
   leader: string;
   /** 备注 */
   remark?: string;
+  /** 数据来源（老数据升级补 station） */
+  source: RecordSource;
+  /** 来源小组 / 设备名 */
+  origin: string;
+  mergedAt?: string;
+  packageId?: string;
 }
 
 /** 批次统计派生值 */

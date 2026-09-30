@@ -49,6 +49,22 @@ const rules: FormRules = {
 const visible = computed(() => filter.apply(siteStore.sites, sessionStore.sessions));
 const selected = computed(() => siteStore.sites.find((site) => site.id === selectedId.value));
 
+/** 是否隐藏待确认点位（正式分布默认不纳入） */
+const hidePending = ref(false);
+const tableSites = computed(() => (hidePending.value ? visible.value.filter((site) => site.status === 'confirmed') : visible.value));
+const mapSites = computed(() => (hidePending.value ? visible.value.filter((site) => site.status === 'confirmed') : visible.value));
+const pendingCount = computed(() => siteStore.pendingSites.length);
+
+async function confirm(site: BirdSite) {
+  await siteStore.setStatus(site.id, 'confirmed');
+  ElMessage.success(`鸟点 ${site.siteNo} · ${site.name} 已确认，关联环志进入正式统计`);
+}
+
+async function unconfirm(site: BirdSite) {
+  await siteStore.setStatus(site.id, 'pending');
+  ElMessage.success(`鸟点 ${site.siteNo} 已退回待确认，关联环志暂不进正式统计`);
+}
+
 /** 与已有点位的最小间距（km），用于提示点位过近 */
 const nearest = computed(() => {
   if (!selected.value) return undefined;
@@ -137,10 +153,11 @@ async function remove(site: BirdSite) {
 
     <div class="toolbar">
       <el-button type="primary" @click="openCreate">登记鸟点</el-button>
+      <el-checkbox v-model="hidePending">正式分布（隐藏待确认点位）</el-checkbox>
       <el-tag :type="amap.keyPresent ? 'success' : 'info'" effect="plain">
         高德 key：{{ amap.keyPresent ? '已配置' : '未配置（网格模式）' }}
       </el-tag>
-      <el-tag type="info" effect="plain">点位 {{ siteStore.sites.length }} 个 · 网位合计 {{ siteStore.totalNets }}</el-tag>
+      <el-tag type="info" effect="plain">正式点位 {{ siteStore.confirmedSites.length }} 个 · 待确认 {{ pendingCount }} 个</el-tag>
     </div>
 
     <FilterBar
@@ -167,13 +184,13 @@ async function remove(site: BirdSite) {
               </span>
             </div>
           </template>
-          <SiteMap :sites="visible" :selected-id="selectedId" :height="420" @select="(id: string) => (selectedId = id)" />
+          <SiteMap :sites="mapSites" :selected-id="selectedId" :height="420" @select="(id: string) => (selectedId = id)" />
         </el-card>
       </el-col>
       <el-col :xs="24" :lg="10">
         <el-card shadow="never" class="block">
           <template #header>鸟点台账</template>
-          <el-table :data="visible" size="small" border @row-click="(row: BirdSite) => (selectedId = row.id)">
+          <el-table :data="tableSites" size="small" border @row-click="(row: BirdSite) => (selectedId = row.id)">
             <el-table-column prop="siteNo" label="编号" width="80" />
             <el-table-column prop="name" label="名称" min-width="120" />
             <el-table-column label="生境" width="110">
@@ -186,10 +203,19 @@ async function remove(site: BirdSite) {
             <el-table-column label="坐标" width="170">
               <template #default="scope">{{ scope.row.lng }}°E, {{ scope.row.lat }}°N</template>
             </el-table-column>
-            <el-table-column prop="netCount" label="网位" width="70" align="right" />
-            <el-table-column prop="note" label="备注" show-overflow-tooltip />
-            <el-table-column label="操作" width="130" fixed="right">
+            <el-table-column prop="netCount" label="网位" width="60" align="right" />
+            <el-table-column label="确认状态" width="90">
               <template #default="scope">
+                <el-tag :type="scope.row.status === 'pending' ? 'warning' : 'success'" size="small">
+                  {{ scope.row.status === 'pending' ? '待确认' : '已确认' }}
+                </el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column prop="note" label="备注" show-overflow-tooltip />
+            <el-table-column label="操作" width="220" fixed="right">
+              <template #default="scope">
+                <el-button v-if="scope.row.status === 'pending'" link type="success" @click.stop="confirm(scope.row)">确认</el-button>
+                <el-button v-else link type="warning" @click.stop="unconfirm(scope.row)">退回待确认</el-button>
                 <el-button link type="primary" @click.stop="openEdit(scope.row)">编辑</el-button>
                 <el-button link type="danger" @click.stop="remove(scope.row)">删除</el-button>
               </template>

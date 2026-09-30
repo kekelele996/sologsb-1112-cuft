@@ -43,8 +43,12 @@ export const useSessionStore = defineStore('session', {
 
   actions: {
     async hydrate() {
-      this.sessions = await db.sessions.orderBy('date').reverse().toArray();
+      await this.reload();
       this.hydrated = true;
+    },
+
+    async reload() {
+      this.sessions = await db.sessions.orderBy('date').reverse().toArray();
     },
 
     async addSession(input: SessionInput): Promise<SurveySession> {
@@ -61,6 +65,8 @@ export const useSessionStore = defineStore('session', {
         closed: false,
         leader: input.leader.trim(),
         remark: input.remark?.trim() || undefined,
+        source: 'station',
+        origin: '站里',
       };
       await db.sessions.put(toPlain(session));
       this.sessions = [session, ...this.sessions];

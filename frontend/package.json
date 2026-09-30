@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "vue-tsc --noEmit && vite build",
-    "preview": "vite preview --port 21812"
+    "preview": "vite preview --port 21812",
+    "test:merge": "node -e \"const esbuild=require('esbuild');esbuild.build({entryPoints:['scripts/merge-core.test.ts'],bundle:true,platform:'node',format:'cjs',outfile:'scripts/.merge-core.test.cjs'}).then(()=>{require('./scripts/.merge-core.test.cjs')}).catch(e=>{console.error(e);process.exit(1)})\" && node -e \"require('fs').rmSync('scripts/.merge-core.test.cjs')\""
   },
   "dependencies": {
     "@element-plus/icons-vue": "^2.3.1",

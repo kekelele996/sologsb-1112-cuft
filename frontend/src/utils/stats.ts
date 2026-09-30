@@ -71,9 +71,23 @@ export function recaptureRate(records: RingRecord[]): number {
   return base > 0 ? Number(((recaptured / base) * 100).toFixed(1)) : 0;
 }
 
-/** 批次统计：鸟种数、初捕数与重捕数 */
-export function buildSessionStats(session: SurveySession, records: RingRecord[], siteName: string): SessionStats {
-  const scoped = records.filter((record) => record.sessionId === session.id);
+/**
+ * 批次统计：鸟种数、初捕数与重捕数。
+ * 合并后的正式口径：默认排除冲突留档版（superseded）；
+ * 传入 confirmedSiteIds 时，再排除待确认鸟点上的记录（不进正式统计）。
+ */
+export function buildSessionStats(
+  session: SurveySession,
+  records: RingRecord[],
+  siteName: string,
+  confirmedSiteIds?: Set<string>,
+): SessionStats {
+  const scoped = records.filter(
+    (record) =>
+      record.sessionId === session.id &&
+      !record.superseded &&
+      (!confirmedSiteIds || confirmedSiteIds.has(record.siteId)),
+  );
   const breakdown = statusBreakdown(scoped);
   const base = breakdown.初捕 + breakdown.重捕;
   return {
